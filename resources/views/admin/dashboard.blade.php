@@ -97,7 +97,7 @@ new Chart(ctx, {
         labels: ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'],
         datasets: [{
             label: 'Perubahan Barang',
-            data: [100,120,130,150,140,160,170,180,200,210,230,250],
+            data: [0,0,0,0,0,0,0,0,0,0,0,0],
             borderColor: '#9333ea',
             backgroundColor: 'rgba(147,51,234,0.2)',
             tension: 0.4,

@@ -293,11 +293,8 @@ Route::middleware(['role:operator'])
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/cetak-struk', [TransaksiController::class,'cetakIndex'])
-        ->name('cetak.index');
-
-    Route::get('/cetak-struk/{id}', [TransaksiController::class,'cetakShow'])
-        ->name('cetak.show');
+    Route::get('/struk/{id}', [TransaksiController::class,'cetakShow'])
+        ->name('struk.show');
 
 
     /*

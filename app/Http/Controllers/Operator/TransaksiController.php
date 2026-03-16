@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Operator;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class TransaksiController extends Controller
 {
@@ -18,19 +17,18 @@ class TransaksiController extends Controller
 
     public function index()
     {
-
         $transaksi = DB::table('transaksi')
             ->orderBy('created_at','desc')
             ->get();
 
         return view('operator.transaksi.index', compact('transaksi'));
-
     }
+
 
 
     /*
     |--------------------------------------------------------------------------
-    | FORM BUAT TRANSAKSI
+    | HALAMAN KASIR
     |--------------------------------------------------------------------------
     */
 
@@ -46,6 +44,7 @@ class TransaksiController extends Controller
     }
 
 
+
     /*
     |--------------------------------------------------------------------------
     | SIMPAN TRANSAKSI
@@ -57,7 +56,8 @@ class TransaksiController extends Controller
 
         $request->validate([
             'barang_id' => 'required|array',
-            'qty' => 'required|array'
+            'qty' => 'required|array',
+            'metode' => 'required'
         ]);
 
         DB::beginTransaction();
@@ -67,12 +67,16 @@ class TransaksiController extends Controller
             $kode = 'GF-' . date('YmdHis');
 
             $transaksiId = DB::table('transaksi')->insertGetId([
+
                 'kode_transaksi' => $kode,
+                'metode' => $request->metode,
+                'total' => $request->total,
                 'created_at' => now(),
                 'updated_at' => now()
+
             ]);
 
-            $total = 0;
+
 
             foreach ($request->barang_id as $index => $barangId) {
 
@@ -81,9 +85,12 @@ class TransaksiController extends Controller
                     ->first();
 
                 $qty = $request->qty[$index];
+
                 $subtotal = $barang->harga * $qty;
 
+
                 DB::table('detail_transaksi')->insert([
+
                     'transaksi_id' => $transaksiId,
                     'barang_id' => $barangId,
                     'qty' => $qty,
@@ -91,34 +98,33 @@ class TransaksiController extends Controller
                     'subtotal' => $subtotal,
                     'created_at' => now(),
                     'updated_at' => now()
+
                 ]);
+
 
                 DB::table('barang')
                     ->where('id',$barangId)
-                    ->decrement('stok', $qty);
+                    ->decrement('stok',$qty);
 
-                $total += $subtotal;
             }
 
-            DB::table('transaksi')
-                ->where('id',$transaksiId)
-                ->update([
-                    'total' => $total
-                ]);
 
             DB::commit();
 
-            return redirect()->route('operator.cetak.show',$transaksiId);
+
+            return redirect()->route('operator.cetak-struk.show',$transaksiId);
+
 
         } catch (\Exception $e) {
 
             DB::rollback();
 
-            return back()->with('error','Transaksi gagal');
+            return back()->with('error','Transaksi gagal disimpan');
 
         }
 
     }
+
 
 
     /*
@@ -134,6 +140,7 @@ class TransaksiController extends Controller
             ->where('id',$id)
             ->first();
 
+
         $detail = DB::table('detail_transaksi')
             ->join('barang','barang.id','=','detail_transaksi.barang_id')
             ->where('transaksi_id',$id)
@@ -145,9 +152,11 @@ class TransaksiController extends Controller
             )
             ->get();
 
+
         return view('operator.transaksi.show',compact('trx','detail'));
 
     }
+
 
 
     /*
@@ -168,27 +177,10 @@ class TransaksiController extends Controller
     }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | CETAK STRUK LIST
-    |--------------------------------------------------------------------------
-    */
-
-    public function cetakIndex()
-    {
-
-        $transaksi = DB::table('transaksi')
-            ->orderBy('created_at','desc')
-            ->get();
-
-        return view('operator.cetak-struk.index',compact('transaksi'));
-
-    }
-
 
     /*
     |--------------------------------------------------------------------------
-    | CETAK STRUK
+    | STRUK
     |--------------------------------------------------------------------------
     */
 
@@ -198,6 +190,7 @@ class TransaksiController extends Controller
         $trx = DB::table('transaksi')
             ->where('id',$id)
             ->first();
+
 
         $detail = DB::table('detail_transaksi')
             ->join('barang','barang.id','=','detail_transaksi.barang_id')
@@ -209,6 +202,7 @@ class TransaksiController extends Controller
                 'detail_transaksi.subtotal'
             )
             ->get();
+
 
         return view('operator.cetak-struk.show',compact('trx','detail'));
 

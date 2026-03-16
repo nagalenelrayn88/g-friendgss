@@ -139,13 +139,6 @@
             </a>
         </li>
 
-        <li>
-            <a href="/operator/cetak-struk"
-            class="block p-2 rounded hover:bg-white/20 text-sm">
-                Cetak Struk
-            </a>
-        </li>
-
     </ul>
 
 </li>
