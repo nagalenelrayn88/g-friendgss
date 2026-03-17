@@ -13,8 +13,10 @@
 
     <aside class="w-64 bg-gradient-to-b from-purple-700 to-pink-500 text-white p-5 flex flex-col">
 
-        <h1 class="text-2xl font-bold mb-8 text-center border-b border-white/20 pb-4">G-Friend</h1>
-
+        <div class="mb-6 text-center border-b border-white/20 pb-4">
+    <img src="{{ asset('1773499502402-removebg-preview (1).png') }}"
+     class="w-56 mx-auto" style="filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.8));">
+        </div>
         <ul class="space-y-3 flex-1 overflow-y-auto">
 
             @if(auth()->user()->role == 'superadmin')
@@ -129,13 +131,6 @@
             <a href="/operator/transaksi"
             class="block p-2 rounded hover:bg-white/20 text-sm">
                 Transaksi
-            </a>
-        </li>
-
-        <li>
-            <a href="/operator/detail-transaksi"
-            class="block p-2 rounded hover:bg-white/20 text-sm">
-                Detail Transaksi
             </a>
         </li>
 

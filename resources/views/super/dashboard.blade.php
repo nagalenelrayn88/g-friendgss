@@ -6,7 +6,6 @@
 
 <div class="grid grid-cols-4 gap-6 mb-6">
 
-    <!-- Card -->
     <div class="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 rounded-xl shadow-lg">
         <h3 class="text-sm">Total Penjualan</h3>
         <p class="text-2xl font-bold mt-2">
@@ -37,20 +36,26 @@
 
 </div>
 
-
 <!-- Grafik -->
 <div class="bg-white p-6 rounded-xl shadow-lg">
-
-    <h3 class="mb-4 font-bold text-lg">Analytics Penjualan</h3>
-
+    <h3 class="mb-4 font-bold text-lg">Analytics Penjualan (Bulanan)</h3>
     <canvas id="salesChart"></canvas>
-
 </div>
-
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
+
+// 🔥 LABEL BULAN
+let labels = {!! json_encode(
+    $grafikBulanan->pluck('bulan')->map(function($b){
+        return \Carbon\Carbon::create()->month($b)->format('M');
+    })
+) !!};
+
+// 🔥 DATA QTY
+let data = {!! json_encode($grafikBulanan->pluck('total')) !!};
+
 const ctx = document.getElementById('salesChart');
 
 let hue = 0;
@@ -58,14 +63,15 @@ let hue = 0;
 const chart = new Chart(ctx, {
     type: 'line',
     data: {
-        labels: ['Jan','Feb','Mar','Apr','Mei','Jun','Jul'],
+        labels: labels,
         datasets: [{
-            label: 'Penjualan',
-            data: [0, 0, 0, 0, 0, 0, 0],
+            label: 'Jumlah Barang Terjual',
+            data: data,
             borderColor: 'rgb(255,0,150)',
             backgroundColor: 'rgba(255,0,150,0.1)',
             tension: 0.4,
-            borderWidth: 3
+            borderWidth: 3,
+            fill: true
         }]
     },
     options: {
@@ -81,15 +87,15 @@ const chart = new Chart(ctx, {
             x:{
                 ticks:{ color:'#9333ea' }
             },
-          y:{
-             beginAtZero: true,
-             min: 0,
-             ticks:{ color:'#9333ea' }
+            y:{
+                beginAtZero: true,
+                ticks:{ color:'#9333ea' }
             }
         }
     }
 });
 
+// 🔥 ANIMASI WARNA
 setInterval(() => {
     hue += 5;
     if(hue >= 360) hue = 0;

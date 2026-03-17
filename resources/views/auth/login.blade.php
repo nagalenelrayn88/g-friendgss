@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Login G-Friend</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!-- Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
@@ -19,15 +19,30 @@
             50% {background-position: 100% 50%;}
             100% {background-position: 0% 50%;}
         }
+
+        /* 🔥 TEXT GRADIENT */
+        .text-gradient {
+            background: linear-gradient(to right, #c084fc, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
     </style>
 </head>
 
 <body class="flex items-center justify-center min-h-screen">
 
-    <div class="bg-white/20 backdrop-blur-lg shadow-xl rounded-2xl p-8 w-96 border border-white/30">
+    <div class="bg-white/20 backdrop-blur-lg shadow-xl rounded-2xl p-8 w-[420px] border border-white/30">
 
-        <h2 class="text-2xl font-bold text-white text-center mb-6">
-            G-Friend Login
+        <!-- LOGO -->
+        <div class="text-center mb-4">
+            <img src="{{ asset('1773499502402-removebg-preview (1).png') }}"
+                 class="mx-auto"
+                 style="width: 350px;">
+        </div>
+
+        <!-- 🔥 TITLE -->
+        <h2 class="text-3xl font-bold text-center mb-6 text-white">
+            Login
         </h2>
 
         <form method="POST" action="/login">

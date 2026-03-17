@@ -258,12 +258,6 @@ Route::middleware(['role:operator'])
     Route::get('/dashboard', [OperatorDashboard::class,'index'])
         ->name('dashboard');
 
-    /*
-    |--------------------------------------------------------------------------
-    | TRANSAKSI
-    |--------------------------------------------------------------------------
-    */
-
     Route::get('/transaksi', [TransaksiController::class,'index'])
         ->name('transaksi.index');
 
@@ -273,9 +267,13 @@ Route::middleware(['role:operator'])
     Route::post('/transaksi/store', [TransaksiController::class,'store'])
         ->name('transaksi.store');
 
+    // ✅ DETAIL
     Route::get('/transaksi/{id}', [TransaksiController::class,'show'])
         ->name('transaksi.show');
 
+    // ✅ STRUK PRINT
+    Route::get('/struk/{id}', [TransaksiController::class,'print'])
+        ->name('struk.print');
 
     /*
     |--------------------------------------------------------------------------
@@ -285,16 +283,6 @@ Route::middleware(['role:operator'])
 
     Route::get('/riwayat-transaksi', [TransaksiController::class,'riwayat'])
         ->name('riwayat.index');
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | CETAK STRUK
-    |--------------------------------------------------------------------------
-    */
-
-    Route::get('/struk/{id}', [TransaksiController::class,'cetakShow'])
-        ->name('struk.show');
 
 
     /*

@@ -18,6 +18,7 @@ class LaporanController extends Controller
     {
         $query = Transaksi::query();
 
+        // FILTER TANGGAL
         if ($request->dari && $request->sampai) {
             $query->whereBetween('created_at', [
                 $request->dari . ' 00:00:00',
@@ -27,7 +28,8 @@ class LaporanController extends Controller
 
         $transaksi = $query->latest()->get();
 
-        $totalPendapatan = $transaksi->sum('total_harga');
+        // ✅ PAKAI total
+        $totalPendapatan = $transaksi->sum('total');
         $totalTransaksi = $transaksi->count();
 
         return view('super.laporan.transaksi', compact(
@@ -47,6 +49,7 @@ class LaporanController extends Controller
     {
         $query = Transaksi::query();
 
+        // FILTER TANGGAL
         if ($request->dari && $request->sampai) {
             $query->whereBetween('created_at', [
                 $request->dari . ' 00:00:00',
@@ -54,9 +57,9 @@ class LaporanController extends Controller
             ]);
         }
 
-        // Rekap per hari
+        // ✅ REKAP PER HARI (PAKAI total)
         $pendapatan = $query
-            ->selectRaw('DATE(created_at) as tanggal, SUM(total_harga) as total')
+            ->selectRaw('DATE(created_at) as tanggal, SUM(total) as total')
             ->groupBy('tanggal')
             ->orderBy('tanggal', 'desc')
             ->get();

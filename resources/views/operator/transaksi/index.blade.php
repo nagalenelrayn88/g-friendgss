@@ -67,7 +67,7 @@
                                 Detail
                             </a>
 
-                            <a href="{{ route('operator.cetak.show',$t->id) }}"
+                            <a href="{{ route('operator.struk.print',$t->id) }}"
                             class="bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600 transition">
                                 Print
                             </a>
