@@ -57,14 +57,18 @@ Stok {{ $b->stok }}
 
 @if($b->stok > 0)
 <button
-onclick="tambahProduk({{ $b->id }},'{{ $b->nama_barang }}',{{ $b->harga }})"
-class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg">
-+
+    onclick="tambahProduk(
+        {{ $b->id }}, 
+        '{{ $b->nama_barang }}', 
+        {{ $b->harga }}, 
+        {{ $b->diskon_persen ?? 0 }}, 
+        '{{ $b->nama_diskon_db ?? '' }}'
+    )"
+    class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg">
+    +
 </button>
 @else
-<button class="bg-gray-400 text-white px-3 py-1 rounded-lg cursor-not-allowed">
-Habis
-</button>
+<button class="bg-gray-400 text-white px-3 py-1 rounded-lg cursor-not-allowed">Habis</button>
 @endif
 
 </div>
@@ -158,149 +162,136 @@ class="fixed right-0 top-1/2 bg-purple-600 text-white px-3 py-2 rounded-l-lg">
 
 
 <script>
-
 let cart = {}
 
-function tambahProduk(id,nama,harga){
+function tambahProduk(id, nama, harga, diskon, namaDiskon){
+    if(!cart[id]){
+        cart[id] = {
+            nama: nama,
+            hargaAsli: harga,
+            diskon: diskon,
+            namaDiskon: namaDiskon,
+            qty: 1
+        }
+    } else {
+        cart[id].qty++
+    }
 
-if(!cart[id]){
-cart[id] = {nama:nama,harga:harga,qty:1}
-}else{
-cart[id].qty++
-}
-
-renderCart()
-document.getElementById("paymentPanel").classList.remove("translate-x-full")
-
+    renderCart()
+    document.getElementById("paymentPanel").classList.remove("translate-x-full")
 }
 
 function renderCart(){
+    let tbody = document.getElementById("cart")
+    tbody.innerHTML = ""
+    let totalSemua = 0
 
-let tbody = document.getElementById("cart")
-tbody.innerHTML=""
+    for(let id in cart){
+        let item = cart[id]
+        
+        let subtotalNormal = item.hargaAsli * item.qty
+        let nominalPotongan = (item.hargaAsli * item.diskon / 100) * item.qty
+        let subtotalAkhir = subtotalNormal - nominalPotongan
+        
+        totalSemua += subtotalAkhir
 
-let total = 0
+        // Baris Produk Utama
+        tbody.innerHTML += `
+        <tr class="border-t">
+            <td class="py-2 font-medium">
+                ${item.nama}
+                <input type="hidden" name="barang_id[]" value="${id}">
+                <input type="hidden" name="qty[]" value="${item.qty}">
+            </td>
+            <td class="py-2 text-center">
+                <input type="number" value="${item.qty}" min="1" 
+                onchange="ubahQty(${id}, this.value)" 
+                class="w-12 border rounded text-center text-xs p-1">
+            </td>
+            <td class="py-2 text-right">
+                Rp ${subtotalNormal.toLocaleString('id-ID')}
+            </td>
+            <td class="py-2 text-center">
+                <button type="button" onclick="hapusProduk(${id})" class="text-red-500 font-bold">✕</button>
+            </td>
+        </tr>
+        `
 
-for(let id in cart){
+        // Di dalam loop renderCart()
+if(item.diskon > 0) {
+    tbody.innerHTML += `
+    <tr class="text-[11px] text-red-500 italic bg-red-50">
+        <td colspan="2" class="px-2 py-1 font-semibold">
+            ↳ ${item.namaDiskon} (${item.diskon}%)
+        </td>
+        <td class="px-2 py-1 text-right font-semibold">
+            - Rp ${nominalPotongan.toLocaleString('id-ID')}
+        </td>
+        <td></td>
+    </tr>
+    `
+}
+    }
 
-let item = cart[id]
-let subtotal = item.harga * item.qty
-total += subtotal
-
-tbody.innerHTML += `
-
-<tr class="border-b">
-
-<td>
-${item.nama}
-<input type="hidden" name="barang_id[]" value="${id}">
-<input type="hidden" name="harga[]" value="${item.harga}">
-</td>
-
-<td>
-<input type="number"
-name="qty[]"
-value="${item.qty}"
-min="1"
-onchange="ubahQty(${id},this.value)"
-class="w-14 border rounded">
-</td>
-
-<td>
-Rp ${subtotal.toLocaleString('id-ID')}
-</td>
-
-<td>
-<button type="button"
-onclick="hapusProduk(${id})"
-class="text-red-500 font-bold">
-✕
-</button>
-</td>
-
-</tr>
-
-`
+    document.getElementById("total").innerText = totalSemua.toLocaleString('id-ID')
+    document.getElementById("total_input").value = totalSemua
+    hitungKembalian()
 }
 
-document.getElementById("total").innerText = total.toLocaleString('id-ID')
-document.getElementById("total_input").value = total
-
-hitungKembalian()
-
-}
-
-function ubahQty(id,val){
-cart[id].qty = parseInt(val)
-renderCart()
+function ubahQty(id, val){
+    if(val < 1) val = 1
+    cart[id].qty = parseInt(val)
+    renderCart()
 }
 
 function hapusProduk(id){
-delete cart[id]
-renderCart()
+    delete cart[id]
+    renderCart()
 }
 
 function handleMetode(){
-let metode = document.getElementById("metode").value
-let bayar = document.getElementById("bayar")
-
-if(metode === "transfer"){
-bayar.value=""
-bayar.disabled=true
-document.getElementById("kembalian").innerText="0"
-}else{
-bayar.disabled=false
-}
+    let metode = document.getElementById("metode").value
+    let bayar = document.getElementById("bayar")
+    if(metode === "transfer"){
+        bayar.value = ""; bayar.disabled = true;
+        document.getElementById("kembalian").innerText = "0"
+    } else {
+        bayar.disabled = false
+    }
 }
 
 function hitungKembalian(){
-
-let total = Object.values(cart).reduce((t,i)=>t+(i.harga*i.qty),0)
-let bayar = parseInt(document.getElementById("bayar").value) || 0
-
-let kembali = bayar - total
-if(kembali < 0) kembali = 0
-
-document.getElementById("kembalian").innerText = kembali.toLocaleString('id-ID')
-
-}
-
-function togglePanel(){
-let panel = document.getElementById("paymentPanel")
-panel.classList.toggle("translate-x-full")
+    let total = parseInt(document.getElementById("total_input").value) || 0
+    let bayar = parseInt(document.getElementById("bayar").value) || 0
+    let kembali = bayar - total
+    if(kembali < 0) kembali = 0
+    document.getElementById("kembalian").innerText = kembali.toLocaleString('id-ID')
 }
 
 function searchProduk(){
-let keyword = document.getElementById("searchProduk").value.toLowerCase()
-let produk = document.querySelectorAll(".produk-card")
-
-produk.forEach(card => {
-let nama = card.dataset.nama
-card.style.display = nama.includes(keyword) ? "block" : "none"
-})
+    let keyword = document.getElementById("searchProduk").value.toLowerCase()
+    let produk = document.querySelectorAll(".produk-card")
+    produk.forEach(card => {
+        let nama = card.dataset.nama
+        card.style.display = nama.includes(keyword) ? "block" : "none"
+    })
 }
 
-{{-- ✅ VALIDASI TANPA PAKAI .submit() --}}
+function togglePanel(){
+    document.getElementById("paymentPanel").classList.toggle("translate-x-full")
+}
+
 document.getElementById("formTransaksi").addEventListener("submit", function(e){
-
-if(Object.keys(cart).length === 0){
-alert("Keranjang kosong!")
-e.preventDefault()
-return
-}
-
-let metode = document.getElementById("metode").value
-let bayar = parseInt(document.getElementById("bayar").value) || 0
-let total = Object.values(cart).reduce((t,i)=>t+(i.harga*i.qty),0)
-
-if(metode === "cash" && bayar < total){
-alert("Uang bayar kurang!")
-e.preventDefault()
-return
-}
-
+    if(Object.keys(cart).length === 0){
+        alert("Keranjang kosong!"); e.preventDefault(); return;
+    }
+    let metode = document.getElementById("metode").value
+    let total = parseInt(document.getElementById("total_input").value) || 0
+    let bayar = parseInt(document.getElementById("bayar").value) || 0
+    if(metode === "cash" && bayar < total){
+        alert("Uang bayar kurang!"); e.preventDefault(); return;
+    }
 })
-
 </script>
 
 @endsection

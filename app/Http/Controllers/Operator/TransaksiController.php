@@ -19,98 +19,118 @@ class TransaksiController extends Controller
     }
 
 
-    public function create()
-    {
-        $barang = DB::table('barang')
-            ->where('stok','>',0)
-            ->get();
+   public function create()
+{
+    $barang = DB::table('barang')
+        ->leftJoin('diskon', 'barang.diskon_id', '=', 'diskon.id')
+        ->where('barang.stok', '>', 0)
+        ->select(
+            'barang.*', 
+            'diskon.persen as diskon_persen', 
+            'diskon.nama_diskon as nama_diskon_db' // Kita beri alias agar unik
+        )
+        ->get();
 
-        return view('operator.transaksi.create', compact('barang'));
-    }
+    return view('operator.transaksi.create', compact('barang'));
+}
 
 
-    public function store(Request $request)
-    {
-        $request->validate([
-            'barang_id' => 'required|array',
-            'qty' => 'required|array',
-            'metode' => 'required'
+   public function store(Request $request)
+{
+    $request->validate([
+        'barang_id' => 'required|array',
+        'qty' => 'required|array',
+        'metode' => 'required'
+    ]);
+
+    DB::beginTransaction();
+
+    try {
+        $kode = 'GF-' . date('YmdHis');
+
+        // 1. Simpan Header Transaksi dulu
+        $transaksiId = DB::table('transaksi')->insertGetId([
+            'kode_transaksi' => $kode,
+            'user_id' => \Illuminate\Support\Facades\Auth::id(),
+            'metode' => $request->metode,
+            'total' => 0,
+            'total_harga' => 0,
+            'created_at' => now(),
+            'updated_at' => now()
         ]);
 
-        DB::beginTransaction();
+        $totalFinal = 0;
 
-        try {
+        // 2. Looping barang yang dibeli
+        foreach ($request->barang_id as $index => $barangId) {
+            
+            // 🔥 DISINI KUNCINYA: Ambil barang + Join ke tabel diskon
+            $barang = DB::table('barang')
+                ->leftJoin('diskon', 'barang.diskon_id', '=', 'diskon.id')
+                ->where('barang.id', $barangId)
+                ->select('barang.*', 'diskon.persen as diskon_persen') // ambil persen diskonnya
+                ->first();
 
-            $kode = 'GF-' . date('YmdHis');
+            if(!$barang){
+                throw new \Exception('Barang tidak ditemukan');
+            }
 
-            // 🔥 SIMPAN TRANSAKSI
-            $transaksiId = DB::table('transaksi')->insertGetId([
-                'kode_transaksi' => $kode,
-                'user_id' => \Illuminate\Support\Facades\Auth::id(), // 🔥 FIX ERROR
-                'metode' => $request->metode,
-                'total' => 0,
-                'total_harga' => 0,
+            $qty = $request->qty[$index];
+
+            if($barang->stok < $qty){
+                throw new \Exception('Stok barang ' . $barang->nama_barang . ' tidak cukup');
+            }
+
+            // --- LOGIKA HITUNG DISKON OTOMATIS ---
+            $hargaAsli = $barang->harga;
+            $potongan = 0;
+
+            // Kalau di tabel barang ada diskon_id dan di tabel diskon ada persennya
+            if ($barang->diskon_persen > 0) {
+                $potongan = ($barang->diskon_persen / 100) * $hargaAsli;
+            }
+
+            $hargaSetelahDiskon = $hargaAsli - $potongan;
+            $subtotal = $hargaSetelahDiskon * $qty;
+            // -------------------------------------
+
+            // 3. Simpan ke Detail Transaksi (pakai harga yang sudah dipotong diskon)
+            DB::table('detail_transaksi')->insert([
+                'transaksi_id' => $transaksiId,
+                'barang_id' => $barangId,
+                'qty' => $qty,
+                'harga' => $hargaSetelahDiskon, 
+                'subtotal' => $subtotal,
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
 
-            $total = 0;
+            // 4. Kurangi Stok
+            DB::table('barang')
+                ->where('id', $barangId)
+                ->decrement('stok', $qty);
 
-            foreach ($request->barang_id as $index => $barangId) {
-
-                $barang = DB::table('barang')
-                    ->where('id',$barangId)
-                    ->first();
-
-                if(!$barang){
-                    throw new \Exception('Barang tidak ditemukan');
-                }
-
-                $qty = $request->qty[$index];
-
-                if($barang->stok < $qty){
-                    throw new \Exception('Stok tidak cukup');
-                }
-
-                $subtotal = $barang->harga * $qty;
-
-                DB::table('detail_transaksi')->insert([
-                    'transaksi_id' => $transaksiId,
-                    'barang_id' => $barangId,
-                    'qty' => $qty,
-                    'harga' => $barang->harga,
-                    'subtotal' => $subtotal,
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ]);
-
-                DB::table('barang')
-                    ->where('id',$barangId)
-                    ->decrement('stok', $qty);
-
-                $total += $subtotal;
-            }
-
-            // 🔥 UPDATE TOTAL
-            DB::table('transaksi')
-                ->where('id',$transaksiId)
-                ->update([
-                    'total' => $total,
-                    'total_harga' => $total
-                ]);
-
-            DB::commit();
-
-            // 🔥 REDIRECT KE STRUK
-            return redirect()->route('operator.struk.print', $transaksiId);
-
-        } catch (\Exception $e) {
-
-            DB::rollback();
-
-            // 🔥 DEBUG (kalau masih error)
+            $totalFinal += $subtotal;
         }
+
+        // 5. Update Total di tabel transaksi utama
+        DB::table('transaksi')
+            ->where('id', $transaksiId)
+            ->update([
+                'total' => $totalFinal,
+                'total_harga' => $totalFinal
+            ]);
+
+        DB::commit();
+
+        return redirect()->route('operator.struk.print', $transaksiId)
+                         ->with('success', 'Transaksi Berhasil!');
+
+    } catch (\Exception $e) {
+        DB::rollback();
+        return redirect()->back()->with('error', 'Gagal: ' . $e->getMessage());
     }
+}
 
 
     public function show($id)
@@ -137,26 +157,27 @@ class TransaksiController extends Controller
     return view('operator.transaksi.show', compact('trx','detail'));
 }
 
-    public function print($id)
-    {
-        $trx = DB::table('transaksi')
-            ->where('id',$id)
-            ->first();
+  public function print($id)
+{
+    $trx = DB::table('transaksi')->where('id', $id)->first();
 
-        $detail = DB::table('detail_transaksi')
-            ->join('barang','barang.id','=','detail_transaksi.barang_id')
-            ->where('transaksi_id',$id)
-            ->select(
-                'barang.nama_barang',
-                'detail_transaksi.qty',
-                'detail_transaksi.harga',
-                'detail_transaksi.subtotal'
-            )
-            ->get();
+    $detail = DB::table('detail_transaksi')
+        ->join('barang', 'barang.id', '=', 'detail_transaksi.barang_id')
+        ->leftJoin('diskon', 'barang.diskon_id', '=', 'diskon.id') // Join ke diskon
+        ->where('transaksi_id', $id)
+        ->select(
+            'barang.nama_barang',
+            'barang.harga as harga_asli', // Harga sebelum diskon
+            'detail_transaksi.qty',
+            'detail_transaksi.harga', // Harga setelah diskon
+            'detail_transaksi.subtotal',
+            'diskon.persen',
+            'diskon.nama_diskon'
+        )
+        ->get();
 
-        return view('operator.struk.print',compact('trx','detail'));
-    }
-
+    return view('operator.struk.print', compact('trx', 'detail'));
+}
 
     public function riwayat()
     {
