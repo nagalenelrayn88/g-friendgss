@@ -88,7 +88,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-
 const ctx = document.getElementById('grafikBarang');
 
 new Chart(ctx, {
@@ -96,8 +95,8 @@ new Chart(ctx, {
     data: {
         labels: ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'],
         datasets: [{
-            label: 'Perubahan Barang',
-            data: [0,0,0,0,0,0,0,0,0,0,0,0],
+            label: 'Penambahan Barang Baru',
+            data: {!! json_encode($dataGrafik) !!}, // 🔥 DATA ASLI DARI CONTROLLER
             borderColor: '#9333ea',
             backgroundColor: 'rgba(147,51,234,0.2)',
             tension: 0.4,
@@ -107,13 +106,14 @@ new Chart(ctx, {
     options: {
         scales: {
             y: {
-                min: 0,
-                max: 450
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1 // Biar angkanya pas (1, 2, 3...)
+                }
             }
         }
     }
 });
-
 </script>
 
 @endsection

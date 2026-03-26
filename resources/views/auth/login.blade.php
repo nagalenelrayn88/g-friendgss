@@ -51,6 +51,7 @@
             <div class="mb-4">
                 <label class="text-white">Email</label>
                 <input type="email" name="email"
+                    value="{{ old('email') }}"
                     class="w-full mt-1 p-2 rounded-lg bg-white/70 focus:outline-none">
             </div>
 
@@ -68,6 +69,44 @@
         </form>
 
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+    <script>
+        // 1. Tangkap Error Login (Email/Password Salah)
+        @if($errors->any())
+            Swal.fire({
+                icon: 'error',
+                title: 'Akses Ditolak!',
+                text: '{{ $errors->first() }}', 
+                confirmButtonColor: '#9333ea',
+                background: '#ffffff',
+                showClass: {
+                    popup: 'animate__animated animate__shakeX' // Efek getar biar mantap
+                }
+            });
+        @endif
+
+        // 2. Tangkap Pesan Error Session Manual
+        @if(session('error'))
+            Swal.fire({
+                icon: 'error',
+                title: 'Waduh!',
+                text: '{{ session("error") }}',
+                confirmButtonColor: '#9333ea'
+            });
+        @endif
+        
+        // 3. Tambahkan efek loading pas tombol login diklik
+        document.querySelector('form').addEventListener('submit', function() {
+            let btn = this.querySelector('button');
+            btn.innerHTML = 'Memproses...';
+            btn.disabled = true;
+            btn.classList.add('opacity-70', 'cursor-not-allowed');
+        });
+    </script>
+</body>
 
 </body>
 </html>

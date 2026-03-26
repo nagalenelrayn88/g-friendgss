@@ -22,14 +22,13 @@ class DashboardController extends Controller
             ->where('stok','<=',5)
             ->count();
 
-        // 🔥 GRAFIK BULANAN (QTY TERJUAL)
-        $grafikBulanan = DB::table('detail_transaksi')
-            ->join('transaksi','detail_transaksi.transaksi_id','=','transaksi.id')
-            ->selectRaw('MONTH(transaksi.created_at) as bulan, SUM(detail_transaksi.qty) as total')
+        // 🔥 GRAFIK BULANAN (JUMLAH TRANSAKSI)
+        $grafikBulanan = DB::table('transaksi')
+            ->selectRaw('MONTH(created_at) as bulan, COUNT(id) as total') // Pakai COUNT, bukan SUM QTY
+            ->whereYear('created_at', date('Y')) // Tambahin biar cuma tahun ini aja
             ->groupBy('bulan')
             ->orderBy('bulan','asc')
             ->get();
-
         return view('super.dashboard', compact(
             'totalPenjualan',
             'totalTransaksi',

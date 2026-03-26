@@ -35,18 +35,22 @@ class TransaksiController extends Controller
 }
 
 
-   public function store(Request $request)
+  public function store(Request $request)
 {
     $request->validate([
         'barang_id' => 'required|array',
         'qty' => 'required|array',
-        'metode' => 'required'
+        'metode' => 'required',
+        'bayar' => 'required_if:metode,cash' // Validasi uang bayar jika cash
     ]);
 
     DB::beginTransaction();
 
     try {
         $kode = 'GF-' . date('YmdHis');
+
+        // 🔥 AMBIL NILAI UANG DITERIMA DARI FORM
+        $uangDiterima = $request->metode == 'cash' ? $request->bayar : 0;
 
         // 1. Simpan Header Transaksi dulu
         $transaksiId = DB::table('transaksi')->insertGetId([
@@ -55,6 +59,8 @@ class TransaksiController extends Controller
             'metode' => $request->metode,
             'total' => 0,
             'total_harga' => 0,
+            'uang_diterima' => $uangDiterima, // Simpan uang yang dikasih pelanggan
+            'kembalian' => 0,
             'created_at' => now(),
             'updated_at' => now()
         ]);
@@ -113,12 +119,17 @@ class TransaksiController extends Controller
             $totalFinal += $subtotal;
         }
 
-        // 5. Update Total di tabel transaksi utama
+        // 🔥 HITUNG KEMBALIAN NYATA
+        $kembalian = $request->metode == 'cash' ? ($uangDiterima - $totalFinal) : 0;
+        if($kembalian < 0) $kembalian = 0;
+
+        // 5. Update Total & Kembalian di tabel transaksi utama
         DB::table('transaksi')
             ->where('id', $transaksiId)
             ->update([
                 'total' => $totalFinal,
-                'total_harga' => $totalFinal
+                'total_harga' => $totalFinal,
+                'kembalian' => $kembalian // 🔥 Update kembalian yang benar di sini
             ]);
 
         DB::commit();

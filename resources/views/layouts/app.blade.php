@@ -188,15 +188,15 @@
 
         </ul>
 
-        <div class="mt-auto pt-5 border-t border-white/20">
-            <form action="{{ route('logout') }}" method="POST">
-                @csrf
-                <button type="submit" class="w-full bg-white/10 hover:bg-red-500 transition p-3 rounded text-left flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                    Logout
-                </button>
-            </form>
-        </div>
+       <div class="mt-auto pt-5 border-t border-white/20">
+    <form id="logout-form" action="{{ route('logout') }}" method="POST">
+        @csrf
+        <button type="button" onclick="confirmLogout()" class="w-full bg-white/10 hover:bg-red-500 transition p-3 rounded text-left flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            Logout
+        </button>
+    </form>
+</div>
 
     </aside>
 
@@ -256,6 +256,88 @@ function toggleLaporanOperator() {
     icon.classList.toggle("rotate-90");
 
 }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+<style>
+    /* Gradient Pink-Purple untuk Success Toast */
+    .swal-gradient-success {
+        background: linear-gradient(135deg, #f472b6 0%, #9333ea 100%) !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 15px rgba(147, 51, 234, 0.3) !important;
+    }
+    /* Warna teks & icon putih */
+    .swal2-title-custom { color: white !important; font-weight: 600 !important; }
+    .swal2-icon.swal2-success { border-color: white !important; }
+    .swal2-success-ring { border: .25em solid rgba(255, 255, 255, .3) !important; }
+    .swal2-success-line-tip, .swal2-success-line-long { background-color: white !important; }
+</style>
+
+<script>
+    // Notifikasi SUCCESS (Toast dari Samping)
+    @if(session('success'))
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'Success!',
+            text: '{{ session("success") }}',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            customClass: {
+                popup: 'swal-gradient-success animate__animated animate__fadeInRight',
+                title: 'swal2-title-custom',
+                htmlContainer: 'swal2-title-custom'
+            }
+        });
+    @endif
+
+    // Notifikasi ERROR (Pop-up di Tengah)
+    @if(session('error'))
+        Swal.fire({
+            icon: 'error',
+            title: 'Waduh!',
+            text: '{{ session("error") }}',
+            confirmButtonColor: '#9333ea',
+            showClass: { popup: 'animate__animated animate__zoomIn' },
+            hideClass: { popup: 'animate__animated animate__zoomOut' }
+        });
+    @endif
+
+    function confirmLogout() {
+        Swal.fire({
+            title: 'Mau keluar, {{ auth()->user()->name }}?',
+            text: "Pastikan semua kerjaan kamu sudah tersimpan ya!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#9333ea', // Ungu
+            cancelButtonColor: '#f472b6',  // Pink
+            confirmButtonText: 'Ya, Logout!',
+            cancelButtonText: 'Batal',
+            showClass: {
+                popup: 'animate__animated animate__zoomIn'
+            },
+            hideClass: {
+                popup: 'animate__animated animate__zoomOut'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Animasi loading biar makin pro
+                Swal.fire({
+                    title: 'Logging out...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading()
+                    }
+                });
+                // Submit form-nya
+                document.getElementById('logout-form').submit();
+            }
+        })
+    }
 </script>
 
 </body>

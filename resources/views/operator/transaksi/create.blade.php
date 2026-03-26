@@ -62,7 +62,8 @@ Stok {{ $b->stok }}
         '{{ $b->nama_barang }}', 
         {{ $b->harga }}, 
         {{ $b->diskon_persen ?? 0 }}, 
-        '{{ $b->nama_diskon_db ?? '' }}'
+        '{{ $b->nama_diskon_db ?? '' }}',
+        {{ $b->stok }}
     )"
     class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg">
     +
@@ -125,11 +126,12 @@ class="w-96 bg-gradient-to-b from-white to-purple-50 backdrop-blur-md border-l s
 </select>
 
 <input
-type="number"
-id="bayar"
-placeholder="Uang bayar"
-class="w-full border p-2 rounded"
-oninput="hitungKembalian()"
+    type="number"
+    id="bayar"
+    name="bayar" 
+    placeholder="Uang bayar"
+    class="w-full border p-2 rounded"
+    oninput="hitungKembalian()"
 />
 
 <div class="flex justify-between text-green-600 font-bold">
@@ -162,40 +164,60 @@ class="fixed right-0 top-1/2 bg-purple-600 text-white px-3 py-2 rounded-l-lg">
 
 
 <script>
-let cart = {}
+// Kita pakai window. agar fungsi bisa dipanggil oleh atribut onclick di HTML
+window.cart = {};
 
-function tambahProduk(id, nama, harga, diskon, namaDiskon){
-    if(!cart[id]){
-        cart[id] = {
+// 1. Fungsi Tambah Produk
+window.tambahProduk = function(id, nama, harga, diskon, namaDiskon, stok) {
+    if (!window.cart[id]) {
+        if (stok < 1) {
+            Swal.fire({ 
+                icon: 'error', 
+                title: 'Waduh!', 
+                text: 'Stok barang ini habis.', 
+                confirmButtonColor: '#9333ea' 
+            });
+            return;
+        }
+
+        window.cart[id] = {
             nama: nama,
             hargaAsli: harga,
             diskon: diskon,
             namaDiskon: namaDiskon,
-            qty: 1
+            qty: 1,
+            stokMax: stok
         }
     } else {
-        cart[id].qty++
+        if (window.cart[id].qty + 1 > window.cart[id].stokMax) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Stok Terbatas',
+                text: `Stok cuma ada ${window.cart[id].stokMax}, jangan maruk ya! 😂`,
+                confirmButtonColor: '#9333ea'
+            });
+            return;
+        }
+        window.cart[id].qty++;
     }
 
-    renderCart()
-    document.getElementById("paymentPanel").classList.remove("translate-x-full")
+    renderCart();
+    document.getElementById("paymentPanel").classList.remove("translate-x-full");
 }
 
-function renderCart(){
-    let tbody = document.getElementById("cart")
-    tbody.innerHTML = ""
-    let totalSemua = 0
+// 2. Render Tampilan Keranjang
+window.renderCart = function() {
+    let tbody = document.getElementById("cart");
+    tbody.innerHTML = "";
+    let totalSemua = 0;
 
-    for(let id in cart){
-        let item = cart[id]
-        
-        let subtotalNormal = item.hargaAsli * item.qty
-        let nominalPotongan = (item.hargaAsli * item.diskon / 100) * item.qty
-        let subtotalAkhir = subtotalNormal - nominalPotongan
-        
-        totalSemua += subtotalAkhir
+    for (let id in window.cart) {
+        let item = window.cart[id];
+        let subtotalNormal = item.hargaAsli * item.qty;
+        let nominalPotongan = (item.hargaAsli * item.diskon / 100) * item.qty;
+        let subtotalAkhir = subtotalNormal - nominalPotongan;
+        totalSemua += subtotalAkhir;
 
-        // Baris Produk Utama
         tbody.innerHTML += `
         <tr class="border-t">
             <td class="py-2 font-medium">
@@ -204,7 +226,7 @@ function renderCart(){
                 <input type="hidden" name="qty[]" value="${item.qty}">
             </td>
             <td class="py-2 text-center">
-                <input type="number" value="${item.qty}" min="1" 
+                <input type="number" value="${item.qty}" min="1" max="${item.stokMax}"
                 onchange="ubahQty(${id}, this.value)" 
                 class="w-12 border rounded text-center text-xs p-1">
             </td>
@@ -215,83 +237,115 @@ function renderCart(){
                 <button type="button" onclick="hapusProduk(${id})" class="text-red-500 font-bold">✕</button>
             </td>
         </tr>
-        `
+        `;
 
-        // Di dalam loop renderCart()
-if(item.diskon > 0) {
-    tbody.innerHTML += `
-    <tr class="text-[11px] text-red-500 italic bg-red-50">
-        <td colspan="2" class="px-2 py-1 font-semibold">
-            ↳ ${item.namaDiskon} (${item.diskon}%)
-        </td>
-        <td class="px-2 py-1 text-right font-semibold">
-            - Rp ${nominalPotongan.toLocaleString('id-ID')}
-        </td>
-        <td></td>
-    </tr>
-    `
-}
+        if (item.diskon > 0) {
+            tbody.innerHTML += `
+            <tr class="text-[11px] text-red-500 italic bg-red-50">
+                <td colspan="2" class="px-2 py-1 font-semibold">
+                    ↳ ${item.namaDiskon} (${item.diskon}%)
+                </td>
+                <td class="px-2 py-1 text-right font-semibold">
+                    - Rp ${nominalPotongan.toLocaleString('id-ID')}
+                </td>
+                <td></td>
+            </tr>
+            `;
+        }
     }
 
-    document.getElementById("total").innerText = totalSemua.toLocaleString('id-ID')
-    document.getElementById("total_input").value = totalSemua
-    hitungKembalian()
+    document.getElementById("total").innerText = totalSemua.toLocaleString('id-ID');
+    document.getElementById("total_input").value = totalSemua;
+    hitungKembalian();
 }
 
-function ubahQty(id, val){
-    if(val < 1) val = 1
-    cart[id].qty = parseInt(val)
-    renderCart()
-}
-
-function hapusProduk(id){
-    delete cart[id]
-    renderCart()
-}
-
-function handleMetode(){
-    let metode = document.getElementById("metode").value
-    let bayar = document.getElementById("bayar")
-    if(metode === "transfer"){
-        bayar.value = ""; bayar.disabled = true;
-        document.getElementById("kembalian").innerText = "0"
+// 3. Ubah Qty
+window.ubahQty = function(id, val) {
+    let inputVal = parseInt(val);
+    if (inputVal > window.cart[id].stokMax) {
+        Swal.fire('Stok Kurang', `Maksimal cuma bisa beli ${window.cart[id].stokMax}`, 'warning');
+        window.cart[id].qty = window.cart[id].stokMax;
+    } else if (inputVal < 1 || isNaN(inputVal)) {
+        window.cart[id].qty = 1;
     } else {
-        bayar.disabled = false
+        window.cart[id].qty = inputVal;
+    }
+    renderCart();
+}
+
+// 4. Hapus Produk
+window.hapusProduk = function(id) {
+    delete window.cart[id];
+    renderCart();
+}
+
+// 5. Metode Pembayaran
+window.handleMetode = function() {
+    let metode = document.getElementById("metode").value;
+    let bayar = document.getElementById("bayar");
+    if (metode === "transfer") {
+        bayar.value = ""; 
+        bayar.disabled = true;
+        document.getElementById("kembalian").innerText = "0";
+    } else {
+        bayar.disabled = false;
     }
 }
 
-function hitungKembalian(){
-    let total = parseInt(document.getElementById("total_input").value) || 0
-    let bayar = parseInt(document.getElementById("bayar").value) || 0
-    let kembali = bayar - total
-    if(kembali < 0) kembali = 0
-    document.getElementById("kembalian").innerText = kembali.toLocaleString('id-ID')
+// 6. Hitung Kembalian
+window.hitungKembalian = function() {
+    let total = parseInt(document.getElementById("total_input").value) || 0;
+    let bayar = parseInt(document.getElementById("bayar").value) || 0;
+    let kembali = bayar - total;
+    if (kembali < 0) kembali = 0;
+    document.getElementById("kembalian").innerText = kembali.toLocaleString('id-ID');
 }
 
-function searchProduk(){
-    let keyword = document.getElementById("searchProduk").value.toLowerCase()
-    let produk = document.querySelectorAll(".produk-card")
+// 7. Cari Produk
+window.searchProduk = function() {
+    let keyword = document.getElementById("searchProduk").value.toLowerCase();
+    let produk = document.querySelectorAll(".produk-card");
     produk.forEach(card => {
-        let nama = card.dataset.nama
-        card.style.display = nama.includes(keyword) ? "block" : "none"
-    })
+        let nama = card.dataset.nama;
+        card.style.display = nama.includes(keyword) ? "block" : "none";
+    });
 }
 
-function togglePanel(){
-    document.getElementById("paymentPanel").classList.toggle("translate-x-full")
+// 8. Toggle Panel
+window.togglePanel = function() {
+    document.getElementById("paymentPanel").classList.toggle("translate-x-full");
 }
 
-document.getElementById("formTransaksi").addEventListener("submit", function(e){
-    if(Object.keys(cart).length === 0){
-        alert("Keranjang kosong!"); e.preventDefault(); return;
+// 9. Validasi Submit Form
+document.addEventListener("DOMContentLoaded", function() {
+    const form = document.getElementById("formTransaksi");
+    if (form) {
+        form.addEventListener("submit", function(e) {
+            if (Object.keys(window.cart).length === 0) {
+                Swal.fire('Kosong!', 'Pilih barang dulu dong.', 'info');
+                e.preventDefault(); 
+                return;
+            }
+
+            let metode = document.getElementById("metode").value;
+            let total = parseInt(document.getElementById("total_input").value) || 0;
+            let bayar = parseInt(document.getElementById("bayar").value) || 0;
+            
+            if (metode === "cash" && bayar < total) {
+                Swal.fire('Uang Kurang', 'Masa mau ngutang? Bayarnya kurang tuh!', 'error');
+                e.preventDefault(); 
+                return;
+            }
+
+            Swal.fire({
+                title: 'Memproses...',
+                text: 'Sabar ya, lagi nyimpen data.',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading() }
+            });
+        });
     }
-    let metode = document.getElementById("metode").value
-    let total = parseInt(document.getElementById("total_input").value) || 0
-    let bayar = parseInt(document.getElementById("bayar").value) || 0
-    if(metode === "cash" && bayar < total){
-        alert("Uang bayar kurang!"); e.preventDefault(); return;
-    }
-})
+});
 </script>
 
 @endsection

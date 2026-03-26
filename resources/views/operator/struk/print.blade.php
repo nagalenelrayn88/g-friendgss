@@ -54,9 +54,8 @@
     <div class="header">
         <img src="{{ asset('1773499502402-removebg-preview.png') }}">
         <small>
-            <strong>G-FRIEND STORE</strong><br>
             Jl. Sukamanah Cibogo, Kab. Bandung<br>
-            Telp: 08xxxxxxx
+            Telp: 088218810527
         </small>
     </div>
 
@@ -113,18 +112,17 @@
             <td style="text-align:right;">{{ strtoupper($trx->metode) }}</td>
         </tr>
 
-        {{-- Pastikan nama kolom ini sesuai dengan migration kamu (uang_bayar / uang_diterima) --}}
         @if($trx->metode == 'cash')
         <tr>
             <td>Bayar</td>
             <td style="text-align:right;">
-                Rp{{ number_format($trx->total_harga + ($trx->kembalian ?? 0), 0, ',', '.') }}
+                Rp{{ number_format($trx->uang_diterima, 0, ',', '.') }}
             </td>
         </tr>
         <tr>
             <td>Kembali</td>
             <td style="text-align:right;">
-                Rp{{ number_format($trx->kembalian ?? 0, 0, ',', '.') }}
+                Rp{{ number_format($trx->kembalian, 0, ',', '.') }}
             </td>
         </tr>
         @endif

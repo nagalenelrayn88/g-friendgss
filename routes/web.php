@@ -9,6 +9,7 @@ use App\Http\Controllers\Super\LaporanController;
 use App\Http\Controllers\Super\BarangController;
 use App\Http\Controllers\Super\DiskonController;
 use App\Http\Controllers\Operator\TransaksiController;
+use App\Http\Controllers\Super\UserController as SuperUserController;
 
 use App\Http\Controllers\Super\DashboardController as SuperDashboard;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboard;
@@ -91,29 +92,29 @@ Route::middleware(['auth'])->group(function () {
     */
 
     Route::middleware(['role:superadmin'])
-    ->prefix('super')   // FIX DI SINI
+    ->prefix('super')
     ->name('super.')
     ->group(function () {
 
         Route::get('/dashboard', [SuperDashboard::class, 'index'])
             ->name('dashboard');
-
-        Route::get('/users', [UserController::class, 'index'])
+            
+        Route::get('/users', [SuperUserController::class, 'index'])
             ->name('index');
 
-        Route::get('/users/create', [UserController::class, 'create'])
+        Route::get('/users/create', [SuperUserController::class, 'create'])
             ->name('create');
 
-        Route::post('/users/store', [UserController::class, 'store'])
+        Route::post('/users/store', [SuperUserController::class, 'store'])
             ->name('store');
 
-        Route::get('/users/edit/{id}', [UserController::class, 'edit'])
+        Route::get('/users/edit/{id}', [SuperUserController::class, 'edit'])
             ->name('edit');
 
-        Route::put('/users/update/{id}', [UserController::class, 'update'])
+        Route::put('/users/update/{id}', [SuperUserController::class, 'update'])
             ->name('update');
 
-        Route::delete('/users/{id}', [UserController::class, 'destroy'])
+        Route::delete('/users/{id}', [SuperUserController::class, 'destroy'])
             ->name('destroy');
 
         Route::get('/laporan/transaksi', [LaporanController::class, 'transaksi'])
